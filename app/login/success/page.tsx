@@ -6,6 +6,7 @@ export default function LoginSuccessPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+    const customerId = params.get("customerId");
     const sessionId = params.get("state"); // This is the sessionId we passed as 'state'
 
     if (token) {
@@ -14,7 +15,7 @@ export default function LoginSuccessPage() {
         fetch("/api/auth/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, token }),
+          body: JSON.stringify({ sessionId, token, customerId }),
         }).catch((err) => console.error("Failed to save token to Redis:", err));
       }
 

@@ -8,3 +8,30 @@ export async function getAuthorizeUrl() {
   return await response.json();
 }
 
+export async function getOrderHistory(token: string, customerId: string) {
+  const url = `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/order-history`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customerId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch order history: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+export async function getUserInfo(token: string) {
+  const response = await fetch(`${NEXT_PUBLIC_NSC_API_BASE_URL}/oauth/userinfo`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return await response.json();
+}
+

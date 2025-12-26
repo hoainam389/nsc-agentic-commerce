@@ -14,14 +14,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
     }
 
-    const token = await redis.get(`auth:${sessionId}`);
-
-    if (token) {
-      // Clear the token from Redis after successful retrieval
-      await redis.del(`auth:${sessionId}`);
+    const data = await redis.get(`auth:${sessionId}`);
+    if (!data) {
+      return NextResponse.json({ error: "No data found for sessionId" }, { status: 404 });
     }
+    const { token, customerId } = JSON.parse(data);
 
-    return NextResponse.json({ token });
+    return NextResponse.json({ token, customerId });
   } catch (error) {
     console.error("Error polling token from Redis:", error);
     return NextResponse.json({ error: "Failed to poll token" }, { status: 500 });

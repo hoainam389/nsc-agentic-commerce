@@ -1,12 +1,12 @@
 import { baseURL } from "@/baseUrl";
-import { getAuthorizeUrl } from "@/lib/api-service";
+import { getAuthorizeUrl, getOrderHistory } from "@/lib/api-service";
 import { createMcpHandler } from "mcp-handler";
-import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import redis from "@/lib/redis";
 
 export const NEXT_PUBLIC_NSC_API_BASE_URL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
 
-// Generate a stable sessionId for the server instance
+// Use a session ID derived from the conversation to ensure consistency across tools
 const sessionId = uuidv4();
 
 const getAppsSdkCompatibleHtml = async (baseUrl: string, path: string) => {
@@ -35,74 +35,35 @@ function widgetMeta(widget: ContentWidget) {
   } as const;
 }
 
-async function registerContentWidget(server: any) {
-  const html = await getAppsSdkCompatibleHtml(baseURL, "/");
+async function getLoginToolResponse() {
+  const { authorizeUrl } = await getAuthorizeUrl();
+  const timestamp = new Date().toISOString();
 
-  const contentWidget: ContentWidget = {
-    id: "show_content",
-    title: "Show Content",
-    templateUri: "ui://widget/content-template.html",
-    invoking: "Loading content...",
-    invoked: "Content loaded",
-    html: html,
-    description: "Displays the homepage content",
-    widgetDomain: "https://nextjs.org/docs",
+  const loginWidget: ContentWidget = {
+    id: "show_login",
+    title: "Show Login",
+    templateUri: "ui://widget/login-template.html",
+    invoking: "Loading login view...",
+    invoked: "Login view loaded",
+    html: "", // Not needed for the tool response metadata
+    description: "Displays the login page with a login button",
+    widgetDomain: baseURL,
   };
-  server.registerResource(
-    "content-widget",
-    contentWidget.templateUri,
-    {
-      title: contentWidget.title,
-      description: contentWidget.description,
-      mimeType: "text/html+skybridge",
-      _meta: {
-        "openai/widgetDescription": contentWidget.description,
-        "openai/widgetPrefersBorder": true,
-      },
-    },
-    async (uri: any) => ({
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: "text/html+skybridge",
-          text: `<html>${contentWidget.html}</html>`,
-          _meta: {
-            "openai/widgetDescription": contentWidget.description,
-            "openai/widgetPrefersBorder": true,
-            "openai/widgetDomain": contentWidget.widgetDomain,
-          },
-        },
-      ],
-    })
-  );
 
-  server.registerTool(
-    contentWidget.id,
-    {
-      title: contentWidget.title,
-      description:
-        "Fetch and display the homepage content with the name of the user",
-      inputSchema: {
-        name: z.string().describe("The name of the user to display on the homepage"),
-      },
-      _meta: widgetMeta(contentWidget),
+  return {
+    structuredContent: {
+      authorizeUrl: authorizeUrl,
+      sessionId: sessionId,
+      timestamp: timestamp,
     },
-    async ({ name }: { name: string }) => {
-      return {
-        content: [
-          {
-            type: "text",
-            text: name,
-          },
-        ],
-        structuredContent: {
-          name: name,
-          timestamp: new Date().toISOString(),
-        },
-        _meta: widgetMeta(contentWidget),
-      };
-    }
-  );
+    content: [
+      {
+        type: "text",
+        text: `Please sign in using the button below to view your order history.`,
+      },
+    ],
+    _meta: widgetMeta(loginWidget),
+  };
 }
 
 async function registerLoginWidget(server: any) {
@@ -166,30 +127,126 @@ async function registerLoginWidget(server: any) {
       _meta: widgetMeta(loginWidget),
     },
     async () => {
-      const { authorizeUrl } = await getAuthorizeUrl();
+      return await getLoginToolResponse();
+    }
+  );
+}
+
+async function registerOrderHistoryWidget(server: any) {
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/order-history");
+
+  const orderHistoryWidget: ContentWidget = {
+    id: "show_order_history",
+    title: "Order History",
+    templateUri: "ui://widget/order-history-template.html",
+    invoking: "Fetching your order history...",
+    invoked: "Order history loaded",
+    html: html,
+    description: "Displays the user's recent order history",
+    widgetDomain: baseURL,
+  };
+
+  server.registerResource(
+    "order-history-widget",
+    orderHistoryWidget.templateUri,
+    {
+      title: orderHistoryWidget.title,
+      description: orderHistoryWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": orderHistoryWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${orderHistoryWidget.html}</html>`,
+          _meta: {
+            "openai/widgetCSP": {
+              connect_domains: [
+                orderHistoryWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              resource_domains: [
+                orderHistoryWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              base_uri: [orderHistoryWidget.widgetDomain],
+            },
+            "openai/widgetDescription": orderHistoryWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": orderHistoryWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
+  server.registerTool(
+    orderHistoryWidget.id,
+    {
+      title: orderHistoryWidget.title,
+      description: "Show the user's order history",
+      inputSchema: {},
+      _meta: widgetMeta(orderHistoryWidget),
+    },
+    async () => {
       const timestamp = new Date().toISOString();
 
-      return {
-        structuredContent: {
-          authorizeUrl: authorizeUrl,
-          sessionId: sessionId,
-          timestamp: timestamp,
-        },
-        content: [
-          {
-            type: "text",
-            text: `Please sign in using the button below.`,
+      if (!redis) {
+        return {
+          content: [{ type: "text", text: "Error: Redis not configured." }],
+        };
+      }
+
+      const authData = await redis.get(`auth:${sessionId}`);
+      if (!authData) {
+        // User is anonymous, return the login tool response
+        return await getLoginToolResponse();
+      }
+
+      try {
+        const { token, customerId } = JSON.parse(authData);
+        console.log(`nsc-loading-order-history for customerId: ${customerId}`);
+        const orderHistory = await getOrderHistory(token, customerId);
+
+        console.log("nsc-order-history-response", orderHistory);
+
+        return {
+          structuredContent: {
+            sessionId: sessionId,
+            timestamp: timestamp,
+            orders: orderHistory.orders || [],
           },
-        ],
-        _meta: widgetMeta(loginWidget),
-      };
+          content: [
+            {
+              type: "text",
+              text: `Here is your order history.`,
+            },
+          ],
+          _meta: widgetMeta(orderHistoryWidget),
+        };
+      } catch (error) {
+        console.error("Error fetching order history:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to fetch order history. You might need to log in again.",
+            },
+          ],
+        };
+      }
     }
   );
 }
 
 const handler = createMcpHandler(async (server) => {
-  await registerContentWidget(server);
   await registerLoginWidget(server);
+  await registerOrderHistoryWidget(server);
 });
 
 export const GET = handler;
