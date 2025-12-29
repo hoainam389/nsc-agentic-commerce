@@ -9,7 +9,7 @@ export default function OrderHistoryPage() {
   const isLoading = orderHistory === null || orderHistory === undefined;
 
   return (
-    <div className="font-sans p-4 sm:p-8 max-w-4xl mx-auto">
+    <div className="font-sans p-8 pb-20 sm:p-20 max-w-4xl mx-auto">
       <header className="mb-8 flex justify-between items-center">
         <h1 className="text-2xl font-bold tracking-tight">Order History</h1>
       </header>

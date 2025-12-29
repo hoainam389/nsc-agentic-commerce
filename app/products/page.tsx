@@ -10,7 +10,7 @@ export default function ProductsPage() {
   const query = searchResult?.query;
   const isLoading = searchResult === null || searchResult === undefined;
   return (
-    <div className="font-sans p-4 sm:p-8 max-w-6xl mx-auto">
+    <div className="font-sans p-8 pb-20 sm:p-20 max-w-6xl mx-auto">
       <main>
         {isLoading ? (
           <div className="text-center py-12">

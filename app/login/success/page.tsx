@@ -27,29 +27,31 @@ export default function LoginSuccessPage() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-slate-900 p-8 text-center">
-      <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-        <svg
-          className="w-10 h-10 text-green-600 dark:text-green-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      </div>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-        Login Successful!
-      </h1>
-      <p className="text-slate-600 dark:text-slate-400">
-        You have been successfully authenticated. This window will close automatically.
-      </p>
+    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
+      <main className="flex flex-col gap-8 row-start-2 items-center text-center max-w-xl">
+        <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+          <svg
+            className="w-10 h-10 text-green-600 dark:text-green-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+          Login Successful!
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400">
+          You have been successfully authenticated. This window will close automatically.
+        </p>
+      </main>
     </div>
   );
 }
