@@ -1,8 +1,9 @@
 import { baseURL } from "@/baseUrl";
-import { getAuthorizeUrl, getOrderHistory } from "@/lib/api-service";
+import { getAuthorizeUrl, getOrderHistory, searchProducts } from "@/lib/api-service";
 import { createMcpHandler } from "mcp-handler";
 import { v4 as uuidv4 } from "uuid";
 import redis from "@/lib/redis";
+import { z } from "zod";
 
 export const NEXT_PUBLIC_NSC_API_BASE_URL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
 
@@ -244,9 +245,111 @@ async function registerOrderHistoryWidget(server: any) {
   );
 }
 
+async function registerListProductsWidget(server: any) {
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/products");
+
+  const listProductsWidget: ContentWidget = {
+    id: "list_products",
+    title: "List Products",
+    templateUri: "ui://widget/list-products-template.html",
+    invoking: "Listing products...",
+    invoked: "Products listed",
+    html: html,
+    description: "List products based on a query",
+    widgetDomain: baseURL,
+  };
+
+  server.registerResource(
+    "list-products-widget",
+    listProductsWidget.templateUri,
+    {
+      title: listProductsWidget.title,
+      description: listProductsWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": listProductsWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${listProductsWidget.html}</html>`,
+          _meta: {
+            "openai/widgetCSP": {
+              connect_domains: [
+                listProductsWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              resource_domains: [
+                listProductsWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              base_uri: [listProductsWidget.widgetDomain],
+            },
+            "openai/widgetDescription": listProductsWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": listProductsWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
+  server.registerTool(
+    listProductsWidget.id,
+    {
+      title: listProductsWidget.title,
+      description: "List products in the catalog. Use this tool whenever the user wants to search, find, browse, or list products. It supports listing by keywords, categories, and specific attributes like 'Incontinence Type' or 'Absorbency' (e.g., 'Booster Pads for Urinary Only').",
+      inputSchema: {
+        query: z.string().describe("The search or listing query string. Combine keywords and any specific requirements or filters mentioned by the user (e.g., 'Booster Pads for Urinary Only')."),
+      },
+      _meta: widgetMeta(listProductsWidget),
+    },
+    async ({ query }: { query: string }) => {
+      const timestamp = new Date().toISOString();
+
+      try {
+        console.log(`nsc-listing-products for query: ${query}`);
+        const searchResult = await searchProducts(query);
+
+        console.log("nsc-search-result-response", searchResult);
+
+        return {
+          structuredContent: {
+            sessionId: sessionId,
+            timestamp: timestamp,
+            ...searchResult,
+          },
+          content: [
+            {
+              type: "text",
+              text: `Here are the products for "${query}".`,
+            },
+          ],
+          _meta: widgetMeta(listProductsWidget),
+        };
+      } catch (error) {
+        console.error("Error listing products:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to list products. Please try again later.",
+            },
+          ],
+        };
+      }
+    }
+  );
+}
+
 const handler = createMcpHandler(async (server) => {
   await registerLoginWidget(server);
   await registerOrderHistoryWidget(server);
+  await registerListProductsWidget(server);
 });
 
 export const GET = handler;

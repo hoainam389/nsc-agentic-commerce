@@ -8,6 +8,18 @@ export async function getAuthorizeUrl() {
   return await response.json();
 }
 
+export async function searchProducts(query: string) {
+  const response = await fetch(
+    `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-search/search?query=${encodeURIComponent(
+      query
+    )}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to search: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
 export async function getOrderHistory(token: string, customerId: string) {
   const url = `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/order-history`;
 

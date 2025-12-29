@@ -6,10 +6,6 @@ import { OrderHistoryItem, OrderHistoryProps } from "@/app/order-history/OrderHi
 export default function OrderHistoryPage() {
   const orderHistory = useWidgetProps<OrderHistoryProps & { sessionId: string }>();
   const orders = orderHistory?.orders;
-  
-  console.log("nsc-order-history", orderHistory);
-  console.log("nsc-session-id", orderHistory?.sessionId);
-
   const isLoading = orderHistory === null || orderHistory === undefined;
 
   return (
