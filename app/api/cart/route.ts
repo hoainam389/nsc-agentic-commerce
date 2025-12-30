@@ -24,9 +24,12 @@ export async function GET(req: NextRequest) {
     const data = await getCart(customerId);
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch cart in API route:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Failed to fetch cart", 
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -43,18 +46,23 @@ export async function POST(req: Request) {
       }
   
       const authData = await redis.get(`auth:${sessionId}`);
+      console.log(`nsc-adding-to-cart: authData: ${authData}`);
       if (!authData) {
         return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
       }
   
       const { customerId } = JSON.parse(authData);
+
       console.log(`nsc-adding-to-cart: variant ${variantCode}, qty ${quantity} for customer ${customerId}`);
       const data = await addToCart(customerId, variantCode, quantity);
   
       return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding to cart:", error);
-      return NextResponse.json({ error: "Failed to add to cart" }, { status: 500 });
+      return NextResponse.json({ 
+        error: "Failed to add to cart", 
+        details: error.message 
+      }, { status: 500 });
     }
   }
 

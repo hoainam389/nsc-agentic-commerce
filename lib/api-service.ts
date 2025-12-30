@@ -68,11 +68,16 @@ export async function addToCart(customerId: string, variantCode: string, quantit
 
   const response = await fetch(url, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ customerId, code: variantCode, quantity }),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch order history: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error(`Backend error in addToCart: ${response.status} ${response.statusText} - ${errorText}`);
+    throw new Error(`Failed to add to cart: ${response.statusText} (${errorText})`);
   }
   return await response.json();
 }

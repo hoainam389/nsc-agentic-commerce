@@ -26,6 +26,7 @@ function CartPageContent() {
           const res = await fetch(`/api/cart?sessionId=${sessionId}`);
           if (!res.ok) throw new Error("Failed to fetch cart");
           const data = await res.json();
+          console.log(`nsc-fetched-cart: ${JSON.stringify(data)}`);
           setManualCartResponse(data);
         } catch (error) {
           console.error("Failed to fetch cart manually:", error);
@@ -61,7 +62,11 @@ function CartPageContent() {
     );
   }
 
-  const { items, summary, shippingAddress, paymentMethod, shippingMethod } = response;
+  const items = response.items || [];
+  const summary = response.summary || {};
+  const shippingAddress = response.shippingAddress;
+  const paymentMethod = response.paymentMethod;
+  const shippingMethod = response.shippingMethod;
 
   return (
     <div className="font-sans p-5 max-w-6xl mx-auto">
@@ -77,7 +82,7 @@ function CartPageContent() {
               </div>
               
               <ul className="divide-y divide-slate-100 dark:divide-slate-900">
-                {items?.map((item) => {
+                {items.map((item) => {
                   const hasDiscount = !!item.discountAmount && item.discountAmount > 0;
                   return (
                     <li key={item.id} className="py-4 first:pt-0 last:pb-0 flex gap-4">
@@ -111,40 +116,44 @@ function CartPageContent() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Shipping Address */}
-              <section className="bg-white dark:bg-gray-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="w-5 h-5 text-slate-500" />
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Shipping Address</h2>
-                </div>
-                <address className="not-italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  <span className="font-semibold text-slate-900 dark:text-white">
-                    {shippingAddress.firstName} {shippingAddress.lastName}
-                  </span>
-                  <br />
-                  {shippingAddress.address1}
-                  {shippingAddress.address2 && <><br />{shippingAddress.address2}</>}
-                  <br />
-                  {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
-                  <br />
-                  <span className="mt-2 block">
-                    {shippingAddress.phone && <>Phone: {shippingAddress.phone}<br /></>}
-                    {shippingAddress.email && <>Email: {shippingAddress.email}</>}
-                  </span>
-                </address>
-              </section>
+              {shippingAddress && (
+                <section className="bg-white dark:bg-gray-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPin className="w-5 h-5 text-slate-500" />
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Shipping Address</h2>
+                  </div>
+                  <address className="not-italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {shippingAddress.firstName} {shippingAddress.lastName}
+                    </span>
+                    <br />
+                    {shippingAddress.address1}
+                    {shippingAddress.address2 && <><br />{shippingAddress.address2}</>}
+                    <br />
+                    {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
+                    <br />
+                    <span className="mt-2 block">
+                      {shippingAddress.phone && <>Phone: {shippingAddress.phone}<br /></>}
+                      {shippingAddress.email && <>Email: {shippingAddress.email}</>}
+                    </span>
+                  </address>
+                </section>
+              )}
 
               {/* Payment Method */}
-              <section className="bg-white dark:bg-gray-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCard className="w-5 h-5 text-slate-500" />
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Payment Method</h2>
-                </div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  <p className="uppercase font-semibold text-slate-900 dark:text-white">{paymentMethod.type}</p>
-                  <p className="mt-1">{paymentMethod.cardNumber}</p>
-                  {paymentMethod.expiration && <p className="mt-1 text-xs">Exp: {paymentMethod.expiration}</p>}
-                </div>
-              </section>
+              {paymentMethod && (
+                <section className="bg-white dark:bg-gray-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="w-5 h-5 text-slate-500" />
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Payment Method</h2>
+                  </div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="uppercase font-semibold text-slate-900 dark:text-white">{paymentMethod.type}</p>
+                    <p className="mt-1">{paymentMethod.cardNumber}</p>
+                    {paymentMethod.expiration && <p className="mt-1 text-xs">Exp: {paymentMethod.expiration}</p>}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
 
@@ -158,7 +167,7 @@ function CartPageContent() {
                 {summary.promotions && summary.promotions.length > 0 && (
                   <div className="mb-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Promotions</p>
-                    {summary.promotions.map((promo, idx) => (
+                    {summary.promotions.map((promo: any, idx: number) => (
                       <div key={idx} className="flex justify-between items-start gap-4 mb-1">
                         <span className="text-sm text-green-600 dark:text-green-400 flex-1">{promo.name.split(" - ").pop()}</span>
                         {!promo.isShipping && <span className="text-sm font-medium text-green-600">-{promo.savedAmount}</span>}
@@ -207,25 +216,27 @@ function CartPageContent() {
             </section>
 
             {/* Delivery Status */}
-            <section className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                  <Truck className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-bold text-slate-900 dark:text-white">Delivery</h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full uppercase">
-                      {shippingMethod.status}
-                    </span>
+            {shippingMethod && (
+              <section className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                    <Truck className="w-6 h-6 text-blue-600" />
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{shippingMethod.name}</p>
-                  <p className="text-xs text-slate-500 mt-2 font-medium">
-                    Est. {shippingMethod.estimatedDeliveryDate}
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="font-bold text-slate-900 dark:text-white">Delivery</h3>
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full uppercase">
+                        {shippingMethod.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{shippingMethod.name}</p>
+                    <p className="text-xs text-slate-500 mt-2 font-medium">
+                      Est. {shippingMethod.estimatedDeliveryDate}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
           </div>
         </div>
       </main>
