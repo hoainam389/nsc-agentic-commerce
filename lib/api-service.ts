@@ -20,6 +20,14 @@ export async function searchProducts(query: string) {
   return await response.json();
 }
 
+export async function getProductDetail(productName: string) {
+  const response = await fetch(`${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/get-product?productName=${encodeURIComponent(productName)}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch product detail: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
 export async function getOrderHistory(token: string, customerId: string) {
   const url = `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/order-history`;
 

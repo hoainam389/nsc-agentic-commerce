@@ -91,7 +91,7 @@ export default function LoginPage() {
   }, [state?.authToken, state?.userInfo, setState]);
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
+    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
       <main className="flex flex-col gap-8 row-start-2 items-center text-center">
         {state?.authToken ? (
           <>

@@ -1,5 +1,5 @@
 import { baseURL } from "@/baseUrl";
-import { getAuthorizeUrl, getOrderHistory, searchProducts } from "@/lib/api-service";
+import { getAuthorizeUrl, getOrderHistory, searchProducts, getProductDetail } from "@/lib/api-service";
 import { createMcpHandler } from "mcp-handler";
 import { v4 as uuidv4 } from "uuid";
 import redis from "@/lib/redis";
@@ -346,10 +346,110 @@ async function registerListProductsWidget(server: any) {
   );
 }
 
+async function registerProductDetailWidget(server: any) {
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/products/detail");
+
+  const productDetailWidget: ContentWidget = {
+    id: "show_product_detail",
+    title: "Product Detail",
+    templateUri: "ui://widget/product-detail-template.html",
+    invoking: "Loading product details...",
+    invoked: "Product details loaded",
+    html: html,
+    description: "Display details for a specific product",
+    widgetDomain: baseURL,
+  };
+
+  server.registerResource(
+    "product-detail-widget",
+    productDetailWidget.templateUri,
+    {
+      title: productDetailWidget.title,
+      description: productDetailWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": productDetailWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${productDetailWidget.html}</html>`,
+          _meta: {
+            "openai/widgetCSP": {
+              connect_domains: [
+                productDetailWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              resource_domains: [
+                productDetailWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              base_uri: [productDetailWidget.widgetDomain],
+            },
+            "openai/widgetDescription": productDetailWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": productDetailWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
+  server.registerTool(
+    productDetailWidget.id,
+    {
+      title: productDetailWidget.title,
+      description: "Show details for a specific product. Use this tool when a user asks for more information about a product, wants to see its description, or wants to buy it.",
+      inputSchema: {
+        productName: z.string().describe("The exact display name of the product to show details for."),
+      },
+      _meta: widgetMeta(productDetailWidget),
+    },
+    async ({ productName }: { productName: string }) => {
+      const timestamp = new Date().toISOString();
+
+      try {
+        console.log(`nsc-getting-product-detail for: ${productName}`);
+        const productDetail = await getProductDetail(productName);
+        
+        return {
+          structuredContent: {
+            sessionId: sessionId,
+            timestamp: timestamp,
+            ...productDetail,
+          },
+          content: [
+            {
+              type: "text",
+              text: `Here are the details for ${productDetail?.product?.displayName}.`,
+            },
+          ],
+          _meta: widgetMeta(productDetailWidget),
+        };
+      } catch (error) {
+        console.error("Error getting product detail:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to load product details. Please try again later.",
+            },
+          ],
+        };
+      }
+    }
+  );
+}
+
 const handler = createMcpHandler(async (server) => {
   await registerLoginWidget(server);
   await registerOrderHistoryWidget(server);
   await registerListProductsWidget(server);
+  await registerProductDetailWidget(server);
 });
 
 export const GET = handler;

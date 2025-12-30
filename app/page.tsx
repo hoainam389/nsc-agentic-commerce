@@ -17,7 +17,7 @@ export default function Home() {
   const name = toolOutput?.result?.structuredContent?.name || toolOutput?.name;
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
+    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
         {!isChatGptApp && (
           <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 w-full">
