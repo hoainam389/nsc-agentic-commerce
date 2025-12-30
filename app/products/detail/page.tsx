@@ -4,20 +4,22 @@ import { useWidgetProps, useCallTool } from "@/app/hooks";
 import { ProductDetailResponse } from "./ProductDetail.type";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { getProductDetail } from "@/lib/api-service";
+import { useSearchParams, useRouter } from "next/navigation";
+import { addToCart, getProductDetail } from "@/lib/api-service";
 
 function ProductDetailContent() {
   const baseURL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
   const searchParams = useSearchParams();
   const productNameParam = searchParams.get("productName");
   const backQuery = searchParams.get("backQuery");
-
+  
   const responseFromProps = useWidgetProps<ProductDetailResponse>();
+  const sessionId = searchParams.get("sessionId") || responseFromProps?.sessionId;
   const [manualProductResponse, setManualProductResponse] = useState<ProductDetailResponse | null>(null);
   const [isFetching, setIsFetching] = useState(false);
 
   const callTool = useCallTool();
+  const router = useRouter();
 
   const response = productNameParam
     ? manualProductResponse
@@ -381,10 +383,23 @@ function ProductDetailContent() {
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
     
-    await callTool("add_to_cart", {
-      variantCode: selectedVariant.code,
-      quantity,
-    });
+    try {
+        console.log(`nsc-adding-to-cart: variant ${selectedVariant.code}, qty ${quantity} for session ${sessionId}`);
+        const res = await fetch(`/api/cart`, {
+            method: "POST",
+            body: JSON.stringify({ sessionId, variantCode: selectedVariant.code, quantity }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            console.error("Failed to add to cart:", data);
+            return;
+        }
+        console.log(`nsc-added-to-cart: ${JSON.stringify(data)}`);
+        router.push(`/cart?forceFetch=true${sessionId ? `&sessionId=${sessionId}` : ""}`);
+    } catch (error) {
+        console.error("Failed to add to cart:", error);
+        return;
+    }
   };
 
   const isReady = !!selectedPackage && (showColorSection ? !!selectedColor : true);

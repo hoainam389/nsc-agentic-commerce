@@ -55,3 +55,25 @@ export async function getUserInfo(token: string) {
   return await response.json();
 }
 
+export async function getCart(customerId: string) {
+  const response = await fetch(`${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/get-cart?customerId=${customerId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cart: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+export async function addToCart(customerId: string, variantCode: string, quantity: number) {
+  const url = `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/add-to-cart`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify({ customerId, code: variantCode, quantity }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch order history: ${response.statusText}`);
+  }
+  return await response.json();
+}
+

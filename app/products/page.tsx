@@ -13,6 +13,7 @@ function ProductsListContent() {
   const queryParam = searchParams.get("query");
 
   const responseFromProps = useWidgetProps<ProductListProps>();
+  const sessionId = responseFromProps?.sessionId;
   const [manualSearchResponse, setManualSearchResponse] = useState<ProductListProps | null>(null);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -95,7 +96,7 @@ function ProductsListContent() {
                     )}
                   </div>
                   <Link
-                    href={`/products/detail?productName=${encodeURIComponent(product.displayName)}${queryParam ? `&backQuery=${encodeURIComponent(queryParam)}` : ""}`}
+                    href={`/products/detail?productName=${encodeURIComponent(product.displayName)}${sessionId ? `&sessionId=${sessionId}` : ""}${queryParam ? `&backQuery=${encodeURIComponent(queryParam)}` : ""}`}
                     prefetch={false}
                     className="mt-2 w-full rounded-full border border-slate-200 dark:border-slate-800 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   >

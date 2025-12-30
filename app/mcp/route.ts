@@ -1,5 +1,5 @@
 import { baseURL } from "@/baseUrl";
-import { getAuthorizeUrl, getOrderHistory, searchProducts, getProductDetail } from "@/lib/api-service";
+import { getAuthorizeUrl, getOrderHistory, searchProducts, getProductDetail, getCart, addToCart } from "@/lib/api-service";
 import { createMcpHandler } from "mcp-handler";
 import { v4 as uuidv4 } from "uuid";
 import redis from "@/lib/redis";
@@ -7,7 +7,6 @@ import { z } from "zod";
 
 export const NEXT_PUBLIC_NSC_API_BASE_URL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
 
-// Use a session ID derived from the conversation to ensure consistency across tools
 const sessionId = uuidv4();
 
 const getAppsSdkCompatibleHtml = async (baseUrl: string, path: string) => {
@@ -445,11 +444,168 @@ async function registerProductDetailWidget(server: any) {
   );
 }
 
+async function registerCartWidget(server: any) {
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/cart");
+
+  const cartWidget: ContentWidget = {
+    id: "show_cart",
+    title: "Shopping Cart",
+    templateUri: "ui://widget/cart-template.html",
+    invoking: "Fetching your shopping cart...",
+    invoked: "Shopping cart loaded",
+    html: html,
+    description: "Displays the items in the user's shopping cart along with summary and shipping details",
+    widgetDomain: baseURL,
+  };
+
+  server.registerResource(
+    "cart-widget",
+    cartWidget.templateUri,
+    {
+      title: cartWidget.title,
+      description: cartWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": cartWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${cartWidget.html}</html>`,
+          _meta: {
+            "openai/widgetCSP": {
+              connect_domains: [
+                cartWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              resource_domains: [
+                cartWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              base_uri: [cartWidget.widgetDomain],
+            },
+            "openai/widgetDescription": cartWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": cartWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
+  server.registerTool(
+    cartWidget.id,
+    {
+      title: cartWidget.title,
+      description: "Show the items in the user's shopping cart. Use this tool when the user wants to see their cart, review their order, or check shipping/payment details before checkout.",
+      inputSchema: {},
+      _meta: widgetMeta(cartWidget),
+    },
+    async () => {
+      const timestamp = new Date().toISOString();
+
+      if (!redis) {
+        return {
+          content: [{ type: "text", text: "Error: Redis not configured." }],
+        };
+      }
+
+      const authData = await redis.get(`auth:${sessionId}`);
+      if (!authData) {
+        return await getLoginToolResponse();
+      }
+
+      try {
+        const { customerId } = JSON.parse(authData);
+        console.log(`nsc-loading-cart for customerId: ${customerId}`);
+        const cartData = await getCart(customerId);
+
+        return {
+          structuredContent: {
+            sessionId: sessionId,
+            timestamp: timestamp,
+            ...cartData,
+          },
+          content: [
+            {
+              type: "text",
+              text: `Here is your shopping cart.`,
+            },
+          ],
+          _meta: widgetMeta(cartWidget),
+        };
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to fetch shopping cart. Please try again later.",
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    "add_to_cart",
+    {
+      title: "Add to Cart",
+      description: "Add a product variant to the shopping cart. Use this tool when the user clicks 'Add to Cart' or asks to add an item to their cart.",
+      inputSchema: {
+        variantCode: z.string().describe("The code of the product variant to add"),
+        quantity: z.number().describe("The quantity to add"),
+      },
+    },
+    async ({ variantCode, quantity }: { variantCode: string; quantity: number }) => {
+      if (!redis) {
+        return { content: [{ type: "text", text: "Error: Redis not configured." }] };
+      }
+
+      const authData = await redis.get(`auth:${sessionId}`);
+      if (!authData) {
+        return await getLoginToolResponse();
+      }
+
+      try {
+        const { customerId } = JSON.parse(authData);
+        console.log(`nsc-adding-to-cart: variant ${variantCode}, qty ${quantity} for customer ${customerId}`);
+        
+        // Call the backend to add to cart
+        const response = await addToCart(customerId, variantCode, quantity);
+
+        if (!response.ok) {
+          throw new Error("Failed to add to cart");
+        }
+
+        const cartData = await response.json();
+
+        return {
+          structuredContent: {
+            sessionId,
+            ...cartData,
+          },
+          content: [{ type: "text", text: `Added ${quantity} item(s) to your cart.` }],
+        };
+      } catch (error) {
+        console.error("Error adding to cart:", error);
+        return { content: [{ type: "text", text: "Failed to add item to cart." }] };
+      }
+    }
+  );
+}
+
 const handler = createMcpHandler(async (server) => {
   await registerLoginWidget(server);
   await registerOrderHistoryWidget(server);
   await registerListProductsWidget(server);
   await registerProductDetailWidget(server);
+  await registerCartWidget(server);
 });
 
 export const GET = handler;
