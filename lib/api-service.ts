@@ -82,3 +82,21 @@ export async function addToCart(customerId: string, variantCode: string, quantit
   return await response.json();
 }
 
+export async function submitOrder(token: string, customerId: string) {
+  const url = `${NEXT_PUBLIC_NSC_API_BASE_URL}/mcp-commerce/submit-order`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customerId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to submit order: ${response.statusText}`);
+  }
+  return await response.json();
+}
+

@@ -1,5 +1,5 @@
 import { baseURL } from "@/baseUrl";
-import { getAuthorizeUrl, getOrderHistory, searchProducts, getProductDetail, getCart, addToCart } from "@/lib/api-service";
+import { getAuthorizeUrl, getOrderHistory, searchProducts, getProductDetail, getCart, addToCart, submitOrder } from "@/lib/api-service";
 import { createMcpHandler } from "mcp-handler";
 import { v4 as uuidv4 } from "uuid";
 import redis from "@/lib/redis";
@@ -600,12 +600,122 @@ async function registerCartWidget(server: any) {
   );
 }
 
+async function registerCheckoutWidget(server: any) {
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/check-out");
+
+  const checkoutWidget: ContentWidget = {
+    id: "submit_order",
+    title: "Order Confirmation",
+    templateUri: "ui://widget/checkout-template.html",
+    invoking: "Submitting your order...",
+    invoked: "Order submitted successfully",
+    html: html,
+    description: "Displays the order confirmation after a successful checkout",
+    widgetDomain: baseURL,
+  };
+
+  server.registerResource(
+    "checkout-widget",
+    checkoutWidget.templateUri,
+    {
+      title: checkoutWidget.title,
+      description: checkoutWidget.description,
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/widgetDescription": checkoutWidget.description,
+        "openai/widgetPrefersBorder": true,
+      },
+    },
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/html+skybridge",
+          text: `<html>${checkoutWidget.html}</html>`,
+          _meta: {
+            "openai/widgetCSP": {
+              connect_domains: [
+                checkoutWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              resource_domains: [
+                checkoutWidget.widgetDomain,
+                NEXT_PUBLIC_NSC_API_BASE_URL,
+              ],
+              base_uri: [checkoutWidget.widgetDomain],
+            },
+            "openai/widgetDescription": checkoutWidget.description,
+            "openai/widgetPrefersBorder": true,
+            "openai/widgetDomain": checkoutWidget.widgetDomain,
+          },
+        },
+      ],
+    })
+  );
+
+  server.registerTool(
+    checkoutWidget.id,
+    {
+      title: "Submit Order",
+      description: "Submit the order for the items in the cart. Use this tool when the user says they want to checkout, place order, or complete their purchase.",
+      inputSchema: {},
+      _meta: widgetMeta(checkoutWidget),
+    },
+    async () => {
+      const timestamp = new Date().toISOString();
+
+      if (!redis) {
+        return {
+          content: [{ type: "text", text: "Error: Redis not configured." }],
+        };
+      }
+
+      const authData = await redis.get(`auth:${sessionId}`);
+      if (!authData) {
+        return await getLoginToolResponse();
+      }
+
+      try {
+        const { token, customerId } = JSON.parse(authData);
+        console.log(`nsc-submitting-order for customerId: ${customerId}`);
+        const orderConfirmation = await submitOrder(token, customerId);
+
+        return {
+          structuredContent: {
+            sessionId: sessionId,
+            timestamp: timestamp,
+            ...orderConfirmation,
+          },
+          content: [
+            {
+              type: "text",
+              text: `Order submitted successfully! Your order number is ${orderConfirmation.orderNumber}.`,
+            },
+          ],
+          _meta: widgetMeta(checkoutWidget),
+        };
+      } catch (error) {
+        console.error("Error submitting order:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Failed to submit order. Please try again later.",
+            },
+          ],
+        };
+      }
+    }
+  );
+}
+
 const handler = createMcpHandler(async (server) => {
   await registerLoginWidget(server);
   await registerOrderHistoryWidget(server);
   await registerListProductsWidget(server);
   await registerProductDetailWidget(server);
   await registerCartWidget(server);
+  await registerCheckoutWidget(server);
 });
 
 export const GET = handler;
