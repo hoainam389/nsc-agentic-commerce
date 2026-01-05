@@ -90,11 +90,11 @@ function CartPageContent() {
     );
   }
 
-  if (!response || !response.items) {
+  if (!response || !response.items || !response.summary) {
     return (
       <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
         <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-          <p className="text-gray-500">Your cart is empty or you need to log in.</p>
+          <p className="text-gray-500">Your cart data is incomplete or you need to log in.</p>
         </main>
       </div>
     );

@@ -110,10 +110,10 @@ export default function Cart({
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Order Summary</h2>
 
             <div className="flex flex-col gap-3">
-              {summary.promotions && summary.promotions.length > 0 && (
+              {summary?.promotions && summary?.promotions?.length > 0 && (
                 <div className="mb-2">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Promotions</p>
-                  {summary.promotions.map((promo: any, idx: number) => (
+                  {summary?.promotions?.map((promo: any, idx: number) => (
                     <div key={idx} className="flex justify-between items-start gap-4 mb-1">
                       <span className="text-sm text-green-600 dark:text-green-400 flex-1">{promo.name.split(" - ").pop()}</span>
                       {!promo.isShipping && <span className="text-sm font-medium text-green-600">-{promo.savedAmount}</span>}
@@ -124,37 +124,37 @@ export default function Cart({
 
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                 <span>Subtotal</span>
-                <span>{summary.subtotal}</span>
+                <span>{summary?.subtotal}</span>
               </div>
 
-              {summary.hasSavings && (
+              {summary?.hasSavings && (
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>Discount</span>
-                  <span>-{summary.discountTotal}</span>
+                  <span>-{summary?.discountTotal}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                 <span>Shipping</span>
-                <span>{summary.isFreeShipping ? "Free" : summary.shipping}</span>
+                <span>{summary?.isFreeShipping ? "Free" : summary?.shipping}</span>
               </div>
 
               <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                 <span>Tax</span>
-                <span>{summary.tax}</span>
+                <span>{summary?.tax}</span>
               </div>
 
               <hr className="my-2 border-slate-100 dark:border-slate-900" />
 
               <div className="flex justify-between items-center py-2">
                 <span className="font-bold text-slate-900 dark:text-white">Total</span>
-                <span className="text-xl font-bold text-slate-900 dark:text-white">{summary.total}</span>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">{summary?.total}</span>
               </div>
 
-              {summary.hasSavings && (
+              {summary?.hasSavings && (
                 <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-900/30 text-center">
                   <p className="text-sm font-semibold text-green-700 dark:text-green-400">
-                    You saved {summary.totalSavings}!
+                    You saved {summary?.totalSavings}!
                   </p>
                 </div>
               )}
