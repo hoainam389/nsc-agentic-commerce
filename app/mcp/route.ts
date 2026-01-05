@@ -7,8 +7,6 @@ import { z } from "zod";
 
 export const NEXT_PUBLIC_NSC_API_BASE_URL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
 
-const sessionId = uuidv4();
-
 const getAppsSdkCompatibleHtml = async (baseUrl: string, path: string) => {
   const result = await fetch(`${baseUrl}${path}`);
   return await result.text();
@@ -35,7 +33,8 @@ function widgetMeta(widget: ContentWidget) {
   } as const;
 }
 
-async function getLoginToolResponse() {
+async function getLoginToolResponse(sessionId?: string) {
+  const currentSessionId = sessionId || uuidv4();
   const { authorizeUrl } = await getAuthorizeUrl();
   const timestamp = new Date().toISOString();
 
@@ -53,7 +52,7 @@ async function getLoginToolResponse() {
   return {
     structuredContent: {
       authorizeUrl: authorizeUrl,
-      sessionId: sessionId,
+      sessionId: currentSessionId,
       timestamp: timestamp,
     },
     content: [
@@ -123,11 +122,13 @@ async function registerLoginWidget(server: any) {
     {
       title: loginWidget.title,
       description: "Display the login page to the user",
-      inputSchema: {},
+      inputSchema: {
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
+      },
       _meta: widgetMeta(loginWidget),
     },
-    async () => {
-      return await getLoginToolResponse();
+    async ({ sessionId }: { sessionId?: string }) => {
+      return await getLoginToolResponse(sessionId);
     }
   );
 }
@@ -190,10 +191,22 @@ async function registerOrderHistoryWidget(server: any) {
     {
       title: orderHistoryWidget.title,
       description: "Show the user's order history",
-      inputSchema: {},
+      inputSchema: {
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
+      },
       _meta: widgetMeta(orderHistoryWidget),
     },
-    async () => {
+    async ({ sessionId }: { sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to view your order history. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       const timestamp = new Date().toISOString();
 
       if (!redis) {
@@ -205,7 +218,7 @@ async function registerOrderHistoryWidget(server: any) {
       const authData = await redis.get(`auth:${sessionId}`);
       if (!authData) {
         // User is anonymous, return the login tool response
-        return await getLoginToolResponse();
+        return await getLoginToolResponse(sessionId);
       }
 
       try {
@@ -304,10 +317,21 @@ async function registerListProductsWidget(server: any) {
       description: "List products in the catalog. Use this tool whenever the user wants to search, find, browse, or list products. It supports listing by keywords, categories, and specific attributes like 'Incontinence Type' or 'Absorbency' (e.g., 'Booster Pads for Urinary Only').",
       inputSchema: {
         query: z.string().describe("The search or listing query string. Combine keywords and any specific requirements or filters mentioned by the user (e.g., 'Booster Pads for Urinary Only')."),
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
       },
       _meta: widgetMeta(listProductsWidget),
     },
-    async ({ query }: { query: string }) => {
+    async ({ query, sessionId }: { query: string; sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to search for products. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       const timestamp = new Date().toISOString();
 
       try {
@@ -405,10 +429,21 @@ async function registerProductDetailWidget(server: any) {
       description: "Show details for a specific product. Use this tool when a user asks for more information about a product, wants to see its description, or wants to buy it.",
       inputSchema: {
         productName: z.string().describe("The exact display name of the product to show details for."),
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
       },
       _meta: widgetMeta(productDetailWidget),
     },
-    async ({ productName }: { productName: string }) => {
+    async ({ productName, sessionId }: { productName: string; sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to view product details. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       const timestamp = new Date().toISOString();
 
       try {
@@ -502,10 +537,22 @@ async function registerCartWidget(server: any) {
     {
       title: cartWidget.title,
       description: "Show the items in the user's shopping cart. Use this tool when the user wants to see their cart, review their order, or check shipping/payment details before checkout.",
-      inputSchema: {},
+      inputSchema: {
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
+      },
       _meta: widgetMeta(cartWidget),
     },
-    async () => {
+    async ({ sessionId }: { sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to view your shopping cart. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       const timestamp = new Date().toISOString();
 
       if (!redis) {
@@ -516,7 +563,7 @@ async function registerCartWidget(server: any) {
 
       const authData = await redis.get(`auth:${sessionId}`);
       if (!authData) {
-        return await getLoginToolResponse();
+        return await getLoginToolResponse(sessionId);
       }
 
       try {
@@ -560,16 +607,27 @@ async function registerCartWidget(server: any) {
       inputSchema: {
         variantCode: z.string().describe("The code of the product variant to add"),
         quantity: z.number().describe("The quantity to add"),
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
       },
     },
-    async ({ variantCode, quantity }: { variantCode: string; quantity: number }) => {
+    async ({ variantCode, quantity, sessionId }: { variantCode: string; quantity: number; sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to add items to your cart. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       if (!redis) {
         return { content: [{ type: "text", text: "Error: Redis not configured." }] };
       }
 
       const authData = await redis.get(`auth:${sessionId}`);
       if (!authData) {
-        return await getLoginToolResponse();
+        return await getLoginToolResponse(sessionId);
       }
 
       try {
@@ -587,7 +645,7 @@ async function registerCartWidget(server: any) {
 
         return {
           structuredContent: {
-            sessionId,
+            sessionId: sessionId,
             ...cartData,
           },
           content: [{ type: "text", text: `Added ${quantity} item(s) to your cart.` }],
@@ -658,10 +716,22 @@ async function registerCheckoutWidget(server: any) {
     {
       title: "Submit Order",
       description: "Submit the order for the items in the cart. Use this tool when the user says they want to checkout, place order, or complete their purchase.",
-      inputSchema: {},
+      inputSchema: {
+        sessionId: z.string().optional().describe("The session ID. ALWAYS pass back the sessionId received from previous tool outputs to maintain the user's session."),
+      },
       _meta: widgetMeta(checkoutWidget),
     },
-    async () => {
+    async ({ sessionId }: { sessionId?: string }) => {
+      if (!sessionId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Please log in to submit your order. Use the 'show_login' tool to sign in.",
+            },
+          ],
+        };
+      }
       const timestamp = new Date().toISOString();
 
       if (!redis) {
@@ -672,7 +742,7 @@ async function registerCheckoutWidget(server: any) {
 
       const authData = await redis.get(`auth:${sessionId}`);
       if (!authData) {
-        return await getLoginToolResponse();
+        return await getLoginToolResponse(sessionId);
       }
 
       try {
@@ -720,3 +790,4 @@ const handler = createMcpHandler(async (server) => {
 
 export const GET = handler;
 export const POST = handler;
+
