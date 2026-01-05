@@ -39,7 +39,7 @@ function ProductsListContent() {
 
   const searchResult = queryParam ? manualSearchResponse : (responseFromProps?.items ? responseFromProps : null);
   const products = searchResult?.items?.slice(0, 6);
-  const isLoading = !searchResult && (isFetching || !!queryParam);
+  const isLoading = !searchResult && (isFetching || !!queryParam || responseFromProps === null || responseFromProps === undefined);
 
   return (
     <div className="font-sans p-5 max-w-6xl mx-auto">

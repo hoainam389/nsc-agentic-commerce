@@ -16,6 +16,8 @@ export default function LoginPage() {
   const sessionId = toolOutput?.sessionId;
   console.log(`nsc-login-page: sessionId: ${sessionId}`);
 
+  const isLoading = toolOutput === null || toolOutput === undefined;
+
   // Append sessionId to authorizeUrl so the success page knows where to save the token
   const authorizeUrl = useMemo(() => {
     if (!toolOutput?.authorizeUrl || !sessionId) return undefined;
@@ -92,69 +94,77 @@ export default function LoginPage() {
   }, [state?.authToken, state?.userInfo, setState]);
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-      <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-        {state?.authToken ? (
-          <>
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
-              <svg
-                className="w-8 h-8 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold">Logged In</h1>
-            {state?.userInfo && (
-              <div className="mt-2 text-center flex flex-col gap-1">
-                <p className="text-lg font-bold text-foreground">
-                  {state.userInfo.fullName}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {state.userInfo.email}
-                </p>
-                {state.userInfo.phoneNumber && (
-                  <p className="text-xs text-gray-500">
-                    {state.userInfo.phoneNumber}
-                  </p>
-                )}
-                {state.userInfo.shippingAddress && (
-                  <p className="text-xs text-gray-500">
-                    Shipping Address: {state.userInfo.shippingAddress}
-                  </p>
-                )}
-                {state.userInfo.billingAddress && (
-                  <p className="text-xs text-gray-500">
-                    Billing Address: {state.userInfo.billingAddress}
-                  </p>
-                )}
-              </div>
-            )}
-            <p className="text-gray-600 dark:text-gray-400 mt-4">
-              You have successfully authenticated with your account.
-            </p>
-          </>
+    <div className="font-sans p-5 max-w-4xl mx-auto">
+      <main>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 animate-pulse">Loading...</p>
+          </div>
         ) : (
-          <>
-            <h1 className="text-2xl font-bold">Login</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Please click the button below to sign in.
-            </p>
-            <button
-              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-10 sm:w-auto"
-              onClick={handleLogin}
-            >
-              Login
-            </button>
-          </>
+          <div className="flex flex-col gap-8 items-center text-center py-12">
+            {state?.authToken ? (
+              <>
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
+                  <svg
+                    className="w-8 h-8 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold">Logged In</h1>
+                {state?.userInfo && (
+                  <div className="mt-2 text-center flex flex-col gap-1">
+                    <p className="text-lg font-bold text-foreground">
+                      {state.userInfo.fullName}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {state.userInfo.email}
+                    </p>
+                    {state.userInfo.phoneNumber && (
+                      <p className="text-xs text-gray-500">
+                        {state.userInfo.phoneNumber}
+                      </p>
+                    )}
+                    {state.userInfo.shippingAddress && (
+                      <p className="text-xs text-gray-500">
+                        Shipping Address: {state.userInfo.shippingAddress}
+                      </p>
+                    )}
+                    {state.userInfo.billingAddress && (
+                      <p className="text-xs text-gray-500">
+                        Billing Address: {state.userInfo.billingAddress}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className="text-gray-600 dark:text-gray-400 mt-4">
+                  You have successfully authenticated with your account.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold">Login</h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Please click the button below to sign in.
+                </p>
+                <button
+                  className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-10 sm:w-auto"
+                  onClick={handleLogin}
+                >
+                  Login
+                </button>
+              </>
+            )}
+          </div>
         )}
       </main>
     </div>

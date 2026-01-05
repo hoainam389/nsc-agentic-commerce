@@ -78,13 +78,15 @@ function CartPageContent() {
     );
   }
 
-  const isLoading = !response && (isFetching || forceFetch);
+  const isLoading = !response && (isFetching || forceFetch || responseFromProps === null || responseFromProps === undefined);
 
   if (isLoading) {
     return (
-      <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-        <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-          <p className="text-gray-500 animate-pulse">Loading cart...</p>
+      <div className="font-sans p-5 max-w-6xl mx-auto">
+        <main>
+          <div className="text-center py-12">
+            <p className="text-gray-500 animate-pulse">Loading...</p>
+          </div>
         </main>
       </div>
     );
@@ -92,9 +94,11 @@ function CartPageContent() {
 
   if (!response || !response.items || !response.summary) {
     return (
-      <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-        <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-          <p className="text-gray-500">Your cart data is incomplete or you need to log in.</p>
+      <div className="font-sans p-5 max-w-6xl mx-auto">
+        <main>
+          <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
+            <p className="text-gray-500">Your cart data is incomplete or you need to log in.</p>
+          </div>
         </main>
       </div>
     );
@@ -117,9 +121,11 @@ export default function CartPage() {
   return (
     <Suspense 
       fallback={
-        <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-          <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-            <p className="text-gray-500 animate-pulse">Loading cart...</p>
+        <div className="font-sans p-5 max-w-6xl mx-auto">
+          <main>
+            <div className="text-center py-12">
+              <p className="text-gray-500 animate-pulse">Loading...</p>
+            </div>
           </main>
         </div>
       }

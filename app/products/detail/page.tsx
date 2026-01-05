@@ -1,11 +1,11 @@
 "use client";
 
-import { useWidgetProps, useCallTool } from "@/app/hooks";
+import { useWidgetProps } from "@/app/hooks";
 import { ProductDetailResponse } from "./ProductDetail.type";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { addToCart, getProductDetail } from "@/lib/api-service";
+import { getProductDetail } from "@/lib/api-service";
 
 function ProductDetailContent() {
   const baseURL = process.env.NEXT_PUBLIC_NSC_API_BASE_URL;
@@ -18,7 +18,6 @@ function ProductDetailContent() {
   const [manualProductResponse, setManualProductResponse] = useState<ProductDetailResponse | null>(null);
   const [isFetching, setIsFetching] = useState(false);
 
-  const callTool = useCallTool();
   const router = useRouter();
 
   const response = productNameParam
@@ -51,7 +50,7 @@ function ProductDetailContent() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
-  const isLoading = !product && (isFetching || !!productNameParam);
+  const isLoading = !product && (isFetching || !!productNameParam || responseFromProps === null || responseFromProps === undefined);
 
   // Extract available options from facetFilters
   const facetFilters = product?.facetFilters || [];
@@ -406,9 +405,11 @@ function ProductDetailContent() {
 
   if (isLoading) {
     return (
-      <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-        <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-          <p className="text-gray-500 animate-pulse">Loading product details...</p>
+      <div className="font-sans p-5 max-w-4xl mx-auto">
+        <main>
+          <div className="text-center py-12">
+            <p className="text-gray-500 animate-pulse">Loading...</p>
+          </div>
         </main>
       </div>
     );
@@ -416,9 +417,11 @@ function ProductDetailContent() {
 
   if (!product || !product.displayName) {
     return (
-      <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-        <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-          <p className="text-gray-500">Product not found.</p>
+      <div className="font-sans p-5 max-w-4xl mx-auto">
+        <main className="flex flex-col items-center">
+          <div className="w-full text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800 mb-8">
+            <p className="text-gray-500">Product not found.</p>
+          </div>
           <Link
             href="/products"
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
@@ -691,9 +694,11 @@ export default function ProductDetailPage() {
   return (
     <Suspense 
       fallback={
-        <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-5 gap-16">
-          <main className="flex flex-col gap-8 row-start-2 items-center text-center">
-            <p className="text-gray-500 animate-pulse">Loading...</p>
+        <div className="font-sans p-5 max-w-4xl mx-auto">
+          <main>
+            <div className="text-center py-12">
+              <p className="text-gray-500 animate-pulse">Loading...</p>
+            </div>
           </main>
         </div>
       }
